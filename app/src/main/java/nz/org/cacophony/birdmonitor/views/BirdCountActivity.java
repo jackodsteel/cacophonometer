@@ -54,7 +54,7 @@ public class BirdCountActivity extends AppCompatActivity {
     CountDownTimer countDownTimer = null;
 
     private final BroadcastReceiver messageHandler =
-            RecordingsHelper.createMessageHandler(TAG, message -> tvMessages.setText(message), this::onRecordingFinished);
+            RecordingsHelper.createMessageHandler(message -> tvMessages.setText(message), this::onRecordingFinished);
 
 
     @Override

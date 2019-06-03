@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.support.v4.content.LocalBroadcastManager;
-import android.support.v4.util.Consumer;
 import android.util.Log;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -40,13 +39,27 @@ public class MessageHelper {
     /**
      * Creates and returns an {@link BroadcastReceiver} that will call the given function upon receiving a message.
      * @param onMessage The function to call upon message.
+     * @param converter A converter to take a given messageType and convert it to the corresponding Enum (typically just MessageType::valueOf)
+     * @param <T> The Enum class representing the messageType
      * @return The {@link BroadcastReceiver} instance.
      */
-    public static BroadcastReceiver createReceiver(Consumer<Intent> onMessage) {
+    public static <T extends Enum> BroadcastReceiver createReceiver(MessageConsumer<T> onMessage, StringToEnumConverter<T> converter) {
         return new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                onMessage.accept(intent);
+                try {
+                    String jsonStringMessage = intent.getStringExtra("jsonStringMessage");
+                    if (jsonStringMessage == null) {
+                        throw new IllegalStateException("Received a message without a jsonStringMessage extra");
+                    }
+                    JSONObject jsonMessage = new JSONObject(jsonStringMessage);
+                    String messageTypeStr = jsonMessage.getString("messageType");
+                    T messageType = converter.convert(messageTypeStr);
+                    String messageToDisplay = jsonMessage.getString("messageToDisplay");
+                    onMessage.consume(messageType, messageToDisplay);
+                } catch (Exception e) {
+                    Log.e(TAG, "Error getting JSON object from broadcast message", e);
+                }
             }
         };
     }
@@ -109,3 +122,4 @@ public class MessageHelper {
     }
 
 }
+

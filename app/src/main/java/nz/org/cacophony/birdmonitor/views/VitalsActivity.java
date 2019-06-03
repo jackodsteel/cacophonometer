@@ -2,7 +2,6 @@ package nz.org.cacophony.birdmonitor.views;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -16,7 +15,6 @@ import android.view.View;
 import android.widget.TextView;
 import nz.org.cacophony.birdmonitor.*;
 import org.apache.commons.lang3.StringUtils;
-import org.json.JSONObject;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -24,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static nz.org.cacophony.birdmonitor.views.ManageRecordingsFragment.MANAGE_RECORDINGS_ACTION;
+import static nz.org.cacophony.birdmonitor.views.ManageRecordingsFragment.MessageType;
 import static nz.org.cacophony.birdmonitor.views.ManageRecordingsFragment.MessageType.RECORDING_FINISHED;
 
 
@@ -45,7 +44,7 @@ public class VitalsActivity extends AppCompatActivity {
 
     private PermissionsHelper permissionsHelper;
 
-    private final BroadcastReceiver messageHandler = MessageHelper.createReceiver(this::onMessage);
+    private final BroadcastReceiver messageHandler = MessageHelper.createReceiver((messageType, ignored) -> onMessage(messageType), MessageType::valueOf);
 
     @Override
     protected void onStart() {
@@ -201,21 +200,9 @@ public class VitalsActivity extends AppCompatActivity {
         }
     }
 
-
-    private void onMessage(Intent intent) {
-        try {
-            String jsonStringMessage = intent.getStringExtra("jsonStringMessage");
-            if (jsonStringMessage != null) {
-                JSONObject joMessage = new JSONObject(jsonStringMessage);
-                String messageType = joMessage.optString("messageType");
-                if (messageType.equalsIgnoreCase(RECORDING_FINISHED.name())) {
-                    refreshVitalsDisplayedText();
-                }
-            }
-
-        } catch (Exception ex) {
-            Log.e(TAG, ex.getLocalizedMessage(), ex);
-            tvMessages.setText("Could not record");
+    private void onMessage(MessageType messageType) {
+        if (messageType == RECORDING_FINISHED) {
+            refreshVitalsDisplayedText();
         }
     }
 

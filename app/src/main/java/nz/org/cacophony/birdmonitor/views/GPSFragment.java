@@ -20,7 +20,6 @@ import android.widget.Button;
 import android.widget.TextView;
 import nz.org.cacophony.birdmonitor.*;
 import nz.org.cacophony.birdmonitor.MessageHelper.Action;
-import org.json.JSONObject;
 
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -49,8 +48,8 @@ public class GPSFragment extends Fragment {
 
     private PermissionsHelper permissionsHelper;
 
-    private final BroadcastReceiver rootMessageHandler = MessageHelper.createReceiver(this::onRootMessage);
-    private final BroadcastReceiver gpsMessageHandler = MessageHelper.createReceiver(this::onGpsMessage);
+    private final BroadcastReceiver rootMessageHandler = MessageHelper.createReceiver((messageType, ignored) -> onRootMessage(messageType), RootMessageType::valueOf);
+    private final BroadcastReceiver gpsMessageHandler = MessageHelper.createReceiver(this::onGpsMessage, GpsMessageType::valueOf);
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -108,55 +107,28 @@ public class GPSFragment extends Fragment {
         Util.updateGPSLocation(getActivity().getApplicationContext());
     }
 
-    private void onGpsMessage(Intent intent) {
-        try {
-            if (getView() == null) {
-                return;
-            }
-            String jsonStringMessage = intent.getStringExtra("jsonStringMessage");
-
-            if (jsonStringMessage != null) {
-                JSONObject joMessage = new JSONObject(jsonStringMessage);
-                String messageTypeStr = joMessage.getString("messageType");
-                String messageToDisplay = joMessage.getString("messageToDisplay");
-
-                GpsMessageType messageType = GpsMessageType.valueOf(messageTypeStr);
-                switch (messageType) {
-                    case GPS_UPDATE_SUCCESS:
-                        updateGpsDisplay();
-                        break;
-                    case GPS_UPDATE_FAILED:
-                        ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Oops", messageToDisplay);
-                        tvSearching.setVisibility(View.GONE);
-                        break;
-                }
-            }
-
-        } catch (Exception ex) {
-            Log.e(TAG, ex.getLocalizedMessage(), ex);
+    private void onGpsMessage(GpsMessageType messageType, String messageToDisplay) {
+        if (getView() == null) {
+            return;
+        }
+        switch (messageType) {
+            case GPS_UPDATE_SUCCESS:
+                updateGpsDisplay();
+                break;
+            case GPS_UPDATE_FAILED:
+                ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Oops", messageToDisplay);
+                tvSearching.setVisibility(View.GONE);
+                break;
         }
     }
 
-    private void onRootMessage(Intent intent) {
-        try {
-            if (getView() == null) {
-                return;
-            }
-
-            String jsonStringMessage = intent.getStringExtra("jsonStringMessage");
-            if (jsonStringMessage != null) {
-                JSONObject joMessage = new JSONObject(jsonStringMessage);
-                String messageTypeStr = joMessage.getString("messageType");
-                String messageToDisplay = joMessage.getString("messageToDisplay");
-                RootMessageType messageType = RootMessageType.valueOf(messageTypeStr);
-                if (messageType == RootMessageType.ERROR_DO_NOT_HAVE_ROOT) {
-                    messageToDisplay = "It looks like you have incorrectly indicated in settings that this phone has been rooted";
-                    ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Oops", messageToDisplay);
-                }
-            }
-
-        } catch (Exception ex) {
-            Log.e(TAG, ex.getLocalizedMessage(), ex);
+    private void onRootMessage(RootMessageType messageType) {
+        if (getView() == null) {
+            return;
+        }
+        if (messageType == RootMessageType.ERROR_DO_NOT_HAVE_ROOT) {
+            String messageToDisplay = "It looks like you have incorrectly indicated in settings that this phone has been rooted";
+            ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Oops", messageToDisplay);
         }
     }
 

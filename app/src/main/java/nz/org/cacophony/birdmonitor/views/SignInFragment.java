@@ -2,7 +2,6 @@ package nz.org.cacophony.birdmonitor.views;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
-import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.TextInputLayout;
 import android.support.v4.app.Fragment;
@@ -16,7 +15,6 @@ import android.widget.EditText;
 import android.widget.TextView;
 import nz.org.cacophony.birdmonitor.*;
 import nz.org.cacophony.birdmonitor.MessageHelper.Action;
-import org.json.JSONObject;
 
 public class SignInFragment extends Fragment {
 
@@ -40,7 +38,7 @@ public class SignInFragment extends Fragment {
     private TextInputLayout tilPassword;
     private TextView tvTitleMessage;
 
-    private final BroadcastReceiver messageHandler = MessageHelper.createReceiver(this::onMessage);
+    private final BroadcastReceiver messageHandler = MessageHelper.createReceiver(this::onMessage, MessageType::valueOf);
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -157,8 +155,7 @@ public class SignInFragment extends Fragment {
 
     }
 
-
-    private void onMessage(Intent intent) {
+    private void onMessage(MessageType messageType, String messageToDisplay) {
         Prefs prefs = new Prefs(getActivity());
         tvMessages.setText("");
 
@@ -168,52 +165,37 @@ public class SignInFragment extends Fragment {
         } else if (prefs.getUsername() != null) {
             userNameOrEmailAddress = prefs.getUsername();
         }
-        try {
-            if (getView() == null) {
-                return;
-            }
+        if (getView() == null) {
+            return;
+        }
+        switch (messageType) {
+            case SUCCESSFULLY_SIGNED_IN:
+                ((SetupWizardActivity) getActivity()).setNumberOfPagesForSignedInNotRegistered();
 
-            String jsonStringMessage = intent.getStringExtra("jsonStringMessage");
-            if (jsonStringMessage != null) {
+                tvMessages.setText(messageToDisplay + userNameOrEmailAddress + "\n\n \'Swipe\' to the next step.");
+                tvTitleMessage.setText("Signed In");
+                btnSignIn.setEnabled(false);
+                btnSignIn.setVisibility(View.GONE);
+                btnSignOutUser.setEnabled(true);
+                btnSignOutUser.setVisibility(View.GONE);
+                tilUserNameOrPassword.setVisibility(View.GONE);
+                tilPassword.setVisibility(View.GONE);
+                etPasswordInput.setText("");
 
-                JSONObject joMessage = new JSONObject(jsonStringMessage);
-                String messageTypeStr = joMessage.getString("messageType");
-                String messageToDisplay = joMessage.getString("messageToDisplay");
-                MessageType messageType = MessageType.valueOf(messageTypeStr);
-                switch (messageType) {
-                    case SUCCESSFULLY_SIGNED_IN:
-                        ((SetupWizardActivity) getActivity()).setNumberOfPagesForSignedInNotRegistered();
-
-                        tvMessages.setText(messageToDisplay + userNameOrEmailAddress + "\n\n \'Swipe\' to the next step.");
-                        tvTitleMessage.setText("Signed In");
-                        btnSignIn.setEnabled(false);
-                        btnSignIn.setVisibility(View.GONE);
-                        btnSignOutUser.setEnabled(true);
-                        btnSignOutUser.setVisibility(View.GONE);
-                        tilUserNameOrPassword.setVisibility(View.GONE);
-                        tilPassword.setVisibility(View.GONE);
-                        etPasswordInput.setText("");
-
-                        Util.getGroupsFromServer(getActivity().getApplicationContext());
-                        break;
-                    case NETWORK_ERROR:
-                        ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
-                        etUserNameOrPasswordInput.setText(userNameOrEmailAddress);
-                        break;
-                    case INVALID_CREDENTIALS:
-                        ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
-                        etUserNameOrPasswordInput.setText(userNameOrEmailAddress);
-                        break;
-                    case UNABLE_TO_SIGNIN:
-                        ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
-                        etUserNameOrPasswordInput.setText(userNameOrEmailAddress);
-                        break;
-                }
-            }
-
-        } catch (Exception ex) {
-            Log.e(TAG, ex.getLocalizedMessage(), ex);
-            ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", "Could not login: " + ex.getLocalizedMessage());
+                Util.getGroupsFromServer(getActivity().getApplicationContext());
+                break;
+            case NETWORK_ERROR:
+                ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
+                etUserNameOrPasswordInput.setText(userNameOrEmailAddress);
+                break;
+            case INVALID_CREDENTIALS:
+                ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
+                etUserNameOrPasswordInput.setText(userNameOrEmailAddress);
+                break;
+            case UNABLE_TO_SIGNIN:
+                ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
+                etUserNameOrPasswordInput.setText(userNameOrEmailAddress);
+                break;
         }
     }
 

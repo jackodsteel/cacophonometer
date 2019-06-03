@@ -30,7 +30,7 @@ public class TestRecordFragment extends Fragment {
     private PermissionsHelper permissionsHelper;
 
     private final BroadcastReceiver messageHandler =
-            RecordingsHelper.createMessageHandler(TAG, message -> tvMessages.setText(message), this::onRecordingFinished);
+            RecordingsHelper.createMessageHandler(message -> tvMessages.setText(message), this::onRecordingFinished);
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {

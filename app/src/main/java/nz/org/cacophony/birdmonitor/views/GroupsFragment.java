@@ -1,7 +1,6 @@
 package nz.org.cacophony.birdmonitor.views;
 
 import android.content.BroadcastReceiver;
-import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
@@ -14,7 +13,6 @@ import nz.org.cacophony.birdmonitor.MessageHelper;
 import nz.org.cacophony.birdmonitor.MessageHelper.Action;
 import nz.org.cacophony.birdmonitor.R;
 import nz.org.cacophony.birdmonitor.Util;
-import org.json.JSONObject;
 
 public class GroupsFragment extends Fragment {
 
@@ -35,7 +33,7 @@ public class GroupsFragment extends Fragment {
     private ArrayAdapter<String> adapter;
     private TextView tvMessages;
 
-    private final BroadcastReceiver messageHandler = MessageHelper.createReceiver(this::onMessage);
+    private final BroadcastReceiver messageHandler = MessageHelper.createReceiver(this::onMessage, MessageType::valueOf);
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -118,50 +116,36 @@ public class GroupsFragment extends Fragment {
         }
     }
 
-    private void onMessage(Intent intent) {
-        try {
-            if (getView() == null) {
-                return;
-            }
-            String jsonStringMessage = intent.getStringExtra("jsonStringMessage");
+    private void onMessage(MessageType messageType, String messageToDisplay) {
+        if (getView() == null) {
+            return;
+        }
+        switch (messageType) {
+            case SUCCESSFULLY_ADDED_GROUP:
+                // update the list of groups from server
+                tvMessages.setText(messageToDisplay);
+                ((EditText) getView().findViewById(R.id.etNewGroupInput)).setText("");
 
-            if (jsonStringMessage != null) {
+                ((SetupWizardActivity) getActivity()).nextPageView();
 
-                JSONObject joMessage = new JSONObject(jsonStringMessage);
-                String messageTypeStr = joMessage.getString("messageType");
-                String messageToDisplay = joMessage.getString("messageToDisplay");
+                // Refresh groups list (added as automated testing sometimes tried to get group before they were showing
 
-                MessageType messageType = MessageType.valueOf(messageTypeStr);
-                switch (messageType) {
-                    case SUCCESSFULLY_ADDED_GROUP:
-                        // update the list of groups from server
-                        tvMessages.setText(messageToDisplay);
-                        ((EditText) getView().findViewById(R.id.etNewGroupInput)).setText("");
+                tvMessages.setText("");
+                resetGroups();
 
-                        ((SetupWizardActivity) getActivity()).nextPageView();
+                break;
+            case FAILED_TO_ADD_GROUP:
+                ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
+                ((SetupWizardActivity) getActivity()).setGroup(null);
 
-                        // Refresh groups list (added as automated testing sometimes tried to get group before they were showing
-
-                        tvMessages.setText("");
-                        resetGroups();
-
-                        break;
-                    case FAILED_TO_ADD_GROUP:
-                        ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
-                        ((SetupWizardActivity) getActivity()).setGroup(null);
-
-                        resetGroups();
-                        break;
-                    case SUCCESSFULLY_RETRIEVED_GROUPS:
-                        resetGroups();
-                        break;
-                    case FAILED_TO_RETRIEVE_GROUPS:
-                        ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
-                        break;
-                }
-            }
-        } catch (Exception ex) {
-            Log.e(TAG, ex.getLocalizedMessage(), ex);
+                resetGroups();
+                break;
+            case SUCCESSFULLY_RETRIEVED_GROUPS:
+                resetGroups();
+                break;
+            case FAILED_TO_RETRIEVE_GROUPS:
+                ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
+                break;
         }
     }
 

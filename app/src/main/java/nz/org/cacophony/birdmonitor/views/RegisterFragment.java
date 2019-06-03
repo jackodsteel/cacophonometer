@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.res.ResourcesCompat;
@@ -21,7 +20,6 @@ import nz.org.cacophony.birdmonitor.Prefs;
 import nz.org.cacophony.birdmonitor.R;
 import nz.org.cacophony.birdmonitor.Server;
 import nz.org.cacophony.birdmonitor.Util;
-import org.json.JSONObject;
 
 import static nz.org.cacophony.birdmonitor.IdlingResourceForEspressoTesting.registerPhoneIdlingResource;
 import static nz.org.cacophony.birdmonitor.MessageHelper.*;
@@ -46,7 +44,7 @@ public class RegisterFragment extends Fragment {
     private EditText etDeviceNameInput;
     private TextView tvTitleMessage;
 
-    private final BroadcastReceiver messageHandler = createReceiver(this::onMessage);
+    private final BroadcastReceiver messageHandler = createReceiver(this::onMessage, MessageType::valueOf);
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -92,43 +90,27 @@ public class RegisterFragment extends Fragment {
         }
     }
 
-    private void onMessage(Intent intent) {
-        try {
-            if (getView() == null) {
-                return;
-            }
-
-            String jsonStringMessage = intent.getStringExtra("jsonStringMessage");
-            if (jsonStringMessage != null) {
-                JSONObject joMessage = new JSONObject(jsonStringMessage);
-                String messageTypeStr = joMessage.getString("messageType");
-                String messageToDisplay = joMessage.getString("messageToDisplay");
-
-                MessageType messageType = MessageType.valueOf(messageTypeStr);
-                switch (messageType) {
-                    case REGISTER_SUCCESS:
-                        tvTitleMessage.setText("Phone is registered");
-                        tvMessages.setText(messageToDisplay + " Swipe to next screen.");
-                        ((SetupWizardActivity) getActivity()).setNumberOfPagesForRegisterd();
-                        etGroupNameInput.setEnabled(false);
-                        etDeviceNameInput.setEnabled(false);
-                        break;
-                    case REGISTER_FAIL:
-                        tvMessages.setText(messageToDisplay);
-                        ((SetupWizardActivity) getActivity()).setNumberOfPagesForSignedInNotRegistered();
-                        etGroupNameInput.setEnabled(true);
-                        etDeviceNameInput.setEnabled(true);
-                        break;
-                    default:
-                        ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
-                        break;
-                }
-            }
-        } catch (Exception ex) {
-            Log.e(TAG, ex.getLocalizedMessage(), ex);
-
-            tvMessages.setText("Oops, your phone did not register for an unknown reason: " + ex.getLocalizedMessage());
-            displayOrHideGUIObjects(true);
+    private void onMessage(MessageType messageType, String messageToDisplay) {
+        if (getView() == null) {
+            return;
+        }
+        switch (messageType) {
+            case REGISTER_SUCCESS:
+                tvTitleMessage.setText("Phone is registered");
+                tvMessages.setText(messageToDisplay + " Swipe to next screen.");
+                ((SetupWizardActivity) getActivity()).setNumberOfPagesForRegisterd();
+                etGroupNameInput.setEnabled(false);
+                etDeviceNameInput.setEnabled(false);
+                break;
+            case REGISTER_FAIL:
+                tvMessages.setText(messageToDisplay);
+                ((SetupWizardActivity) getActivity()).setNumberOfPagesForSignedInNotRegistered();
+                etGroupNameInput.setEnabled(true);
+                etDeviceNameInput.setEnabled(true);
+                break;
+            default:
+                ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
+                break;
         }
     }
 

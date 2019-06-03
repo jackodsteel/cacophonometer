@@ -2,7 +2,6 @@ package nz.org.cacophony.birdmonitor.views;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.TextInputEditText;
 import android.support.design.widget.TextInputLayout;
@@ -16,7 +15,8 @@ import android.widget.EditText;
 import android.widget.TextView;
 import nz.org.cacophony.birdmonitor.*;
 import nz.org.cacophony.birdmonitor.MessageHelper.Action;
-import org.json.JSONObject;
+
+import static nz.org.cacophony.birdmonitor.views.CreateAccountFragment.MessageType.SUCCESSFULLY_CREATED_USER;
 
 public class CreateAccountFragment extends Fragment {
 
@@ -46,7 +46,7 @@ public class CreateAccountFragment extends Fragment {
     private Button btnSignUp;
     private TextView tvMessages;
 
-    private final BroadcastReceiver messageHandler = MessageHelper.createReceiver(this::onMessage);
+    private final BroadcastReceiver messageHandler = MessageHelper.createReceiver(this::onMessage, MessageType::valueOf);
 
 
     @Override
@@ -189,58 +189,35 @@ public class CreateAccountFragment extends Fragment {
         }
     }
 
-    private void onMessage(Intent intent) {
+    private void onMessage(MessageType messageType, String messageToDisplay) {
         Prefs prefs = new Prefs(getActivity());
-        try {
-            if (getView() == null) {
-                return;
-            }
-            String jsonStringMessage = intent.getStringExtra("jsonStringMessage");
+        if (getView() == null) {
+            return;
+        }
+        if (messageType == SUCCESSFULLY_CREATED_USER) {
 
-            if (jsonStringMessage != null) {
+            Util.signOutUser(getActivity().getApplicationContext());
+            prefs.setUsername(etUsername.getText().toString());
+            prefs.setUserNameOrEmailAddress(etUsername.getText().toString());
 
+            tvTitle.setVisibility(View.GONE);
 
-                JSONObject joMessage = new JSONObject(jsonStringMessage);
-                String messageType = joMessage.getString("messageType");
-                String messageToDisplay = joMessage.getString("messageToDisplay");
+            btnSignUp.setVisibility(View.GONE);
 
-                if (messageType.equalsIgnoreCase("SUCCESSFULLY_CREATED_USER")) {
+            etUsername.setText("");
+            etEmail.setText("");
+            etPassword1.setText("");
+            etPassword2.setText("");
 
-                    Util.signOutUser(getActivity().getApplicationContext());
-                    prefs.setUsername(etUsername.getText().toString());
-                    prefs.setUserNameOrEmailAddress(etUsername.getText().toString());
+            tvMessages.setText(messageToDisplay + "\n\nSwipe to next screen to sign in.");
 
-                    tvTitle.setVisibility(View.GONE);
-
-                    btnSignUp.setVisibility(View.GONE);
-
-                    etUsername.setText("");
-                    etEmail.setText("");
-                    etPassword1.setText("");
-                    etPassword2.setText("");
-
-                    // tvMessages.setVisibility(View.VISIBLE); // not sure if setText will cause an error if it isn't visible?
-                    tvMessages.setText(messageToDisplay + "\n\nSwipe to next screen to sign in.");
-
-                } else {
-                    tilUsername.setVisibility(View.VISIBLE);
-                    tilEmail.setVisibility(View.VISIBLE);
-                    tilPassword1.setVisibility(View.VISIBLE);
-                    tilPassword2.setVisibility(View.VISIBLE);
-                    tvMessages.setText("");
-                    ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
-                }
-
-            }
-
-        } catch (Exception ex) {
-
-            Log.e(TAG, ex.getLocalizedMessage(), ex);
-
+        } else {
             tilUsername.setVisibility(View.VISIBLE);
             tilEmail.setVisibility(View.VISIBLE);
             tilPassword1.setVisibility(View.VISIBLE);
             tilPassword2.setVisibility(View.VISIBLE);
+            tvMessages.setText("");
+            ((SetupWizardActivity) getActivity()).displayOKDialogMessage("Error", messageToDisplay);
         }
     }
 }
